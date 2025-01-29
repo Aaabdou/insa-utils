@@ -2,10 +2,10 @@ import {remove_before, remove_after} from './utils.js'
 
 export default {
     name: 'calendar',
-    props: ["buttons", "label", "selected_index", "disabled_indices"],
+    props: ["buttons", "label", "selected_index"],
     template: `<div class="toggle-group unselectable" role="radiogroup" :aria-labelledby="label">
             <template v-for="(name, i) in buttons" :key="name">
-                <div v-if="!disabled_indices?.includes(i)"
+                <div
                     @click="select_button(i)"
                     role="radio"
                     :aria-checked="selected_index === i"

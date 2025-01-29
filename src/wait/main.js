@@ -47,19 +47,7 @@ window.addEventListener('resize', adjustFontSizeToFit);
 
 
 function get_default_selected_rest(disable_olivier = false){
-    const storage_value = localStorage.getItem('selected_rest_index');
-
-    const urlParams = new URLSearchParams(window.location.search);
-
-    if((storage_value == REST_INDICES.OLIVIER_LUNCH || urlParams.get('rest') === 'olivier') && !disable_olivier){
-        if(today_date.getDay() !== 0 && today_date.getDay() !== 6){ // Not weekend
-            return REST_INDICES.OLIVIER_LUNCH;
-        }
-    }
-
-    if(today_date.getHours() < 14 || today_date.getDay() === 6){ // Before 14h or sunday
-        return REST_INDICES.RI_LUNCH
-    }else return REST_INDICES.RI_DINNER
+    return 0;
 }
 
 createApp({
@@ -85,18 +73,47 @@ createApp({
             if(this.ui.selected_rest_index === REST_INDICES.RI_DINNER) return 'dinner';
             return 'lunch'
         },
-        disabled_rest_indices: function(){
-            let indices = [];
-            if(this.ui.selected_day_index >= 5){
-                indices.push(REST_INDICES.OLIVIER_LUNCH)
-                if(this.ui.selected_day_index === 5){
-                    indices.push(REST_INDICES.RI_DINNER)
+        selected_tab: function(){
+            return this.ui.selected_rest_index;
+        },
+        restaurants_open : function(){
+            let restaurants = {};
+            restaurants["à l'olivier"]=this.data["olivier"]["lunch"];
+            const start = new Date(today_date);
+            const end = new Date(today_date);
+            start.setHours(11, 30, 0, 0);
+            end.setHours(13, 30, 0, 0);
+            if(today_date >= start && today_date <= end){
+                restaurants["à l'olivier"]["open"]=true;
+                restaurants["au RI"]=this.data?.["ri"]["lunch"];
+                restaurants["au RI"]["open"]=true;
+                return restaurants;
+            }
+            restaurants["à l'olivier"]["open"]=false;
+            start.setHours(18, 0, 0, 0);
+            end.setHours(19, 30, 0, 0);
+            if(today_date >= start && today_date <= end) {
+                restaurants["au RI"]=this.data["ri"]["dinner"];
+                restaurants["au RI"]["open"]=true;
+                return restaurants;
+            }
+            restaurants["au RI"]={};
+            restaurants["au RI"]["open"]=false;
+            return restaurants;
+        },
+        restaurants : function(){
+            let restaurants = {};
+            restaurants["à l'olivier"]=this.data["olivier"]["lunch"];
+            restaurants["au RI déjeuner"]=this.data["ri"]["lunch"];
+            restaurants["au RI diner"]=this.data["ri"]["dinner"];
+            for (let key in restaurants){
+                if (!restaurants[key]["predictionTime"] && !restaurants["à l'olivier"]["predictionTime"].every(e => e !==null)){
+                    restaurants[key]["prediction_is_null"]=true;
+                }else{
+                    restaurants[key]["prediction_is_null"]=false;
                 }
             }
-            return indices;
-        },
-        selected_restaurant: function(){
-            return this.data?.[this.rest_id]?.[this.time_id];
+            return restaurants;
         },
         is_waitingTime_empty: function(){
             const restaurant = this.selected_restaurant;
@@ -134,53 +151,48 @@ createApp({
     },
     methods: {
         renderHistogram() {
-            if (this.prediction_is_not_null){
-                const canvas = document.getElementById('histogramCanvas');
-                if (!canvas) {
-                    console.error("Canvas element not found!");
-                    return;
-                }
-                if (this.chart) {
-                    // Destroy the existing chart instance
-                    this.chart.destroy();
-                }
-                const ctx = canvas.getContext('2d');
-                this.chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: this.time_id === 'lunch' ? ["11:30", "11:40", "11:50", "12:00", "12:10", "12:20", "12:30", "12:40", "12:50", "13:00", "13:10", "13:20"] : ["18:00", "18:10", "18:20", "18:30", "18:40", "18:50","19:00", "19:10", "19:20", "19:30"],
-                        datasets: [
-                            {
-                                label: 'Temps d\'attente prédictif',
-                                data: this.selected_restaurant?.["predictionTime"],
-                                backgroundColor: '#D32F2F',
+            const restaurants = Object.keys(this.restaurants);
+
+            restaurants.forEach((restaurant, index) => {
+                this.$nextTick(() => { // Ensure DOM is updated before rendering
+                    const canvasId = `histogramCanvas${index}`;
+                    const canvas = document.getElementById(canvasId);
+                    if (!canvas) {
+                        console.error(`Canvas ${canvasId} not found!`);
+                        return;
+                    }
+
+                    if (this[`chart${index}`]) {
+                        this[`chart${index}`].destroy();
+                    }
+
+                    const ctx = canvas.getContext('2d');
+                    this[`chart${index}`] = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: restaurant.includes("olivier") || restaurant.includes("déjeuner")
+                                ? ["11:30", "11:40", "11:50", "12:00", "12:10", "12:20", "12:30", "12:40", "12:50", "13:00", "13:10", "13:20"]
+                                : ["18:00", "18:10", "18:20", "18:30", "18:40", "18:50", "19:00", "19:10", "19:20", "19:30"],
+                            datasets: [{
+                                label: `Temps d'attente ${restaurant}`,
+                                data: this.restaurants[restaurant]?.predictionTime || [],
+                                backgroundColor: '#D32F2F', 
                                 borderRadius: 5,
+                            }],
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false },
                             },
-                        ],
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                display: false,
+                            scales: {
+                                x: { grid: { display: false } },
+                                y: { beginAtZero: true, grid: { color: '#e0e0e0' } },
                             },
                         },
-                        scales: {
-                            x: {
-                                grid: {
-                                    display: false,
-                                },
-                            },
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: '#e0e0e0',
-                                },
-                            },
-                        },
-                    },
+                    });
                 });
-            }
+            });
         },
         get_day_buttons_names: function(){
             let data = [];

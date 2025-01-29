@@ -29,7 +29,7 @@ main.bde {
     border-radius: 0 0 0.9375rem 0.9375rem; /* 15px */
 }
 
-#restaurants {
+#tabs {
     margin: 0;
     display: flex;
     flex-direction: column;
@@ -37,14 +37,14 @@ main.bde {
     gap: 0.625rem; /* 10px */
 }
 
-#restaurants > div.waiting-content {
+#tabs > div.waiting-content {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 0.625rem; /* 10px */
 }
 
-main.bde #restaurants {
+main.bde #tabs {
     flex-direction: row;
 }
 
@@ -57,7 +57,7 @@ main.bde #menu .waiting-content div {
     margin: 0;
 }
 
-#restaurants > h2 {
+#tabs > h2 {
     font-size: 1.125rem; /* 18px */
     font-weight: 500;
     line-height: 1.5625rem; /* 25px */

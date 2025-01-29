@@ -25,43 +25,48 @@ $bde = isset($_GET['bde']);
     <?php if (!$bde) { ?>
         <section id="rest-select">
             <toggle-group
-                    label="Restaurant"
-                    :buttons="['Olivier', 'RI:Déjeuner', 'RI:Diner']"
-                    :disabled_indices="disabled_rest_indices"
+                    label="Tabs"
+                    :buttons="['Temps d attente', 'Prédictions']"
                     v-model:selected_index="ui.selected_rest_index"
             ></toggle-group>
         </section>
     <?php } ?>
 
-    <section id="restaurants"
-             :set="restaurant = selected_restaurant">
-        <template v-if="!ui.data_available">
-            <h2>Les données des files d'attentes n'ont pas pu être récupéré.</h2>
+    <section id="tabs" :set="tab = selected_tab">
+        <template v-if="tab===0">
+            <template v-if="!ui.data_available">
+                <h2>Les données des files d'attentes n'ont pas pu être récupéré.</h2>
+            </template>
+            <template v-else>
+                <template v-for= "(restaurant,key) in restaurants_open">
+                    <template v-if="!restaurant">
+                        <h2>Les données de la file d'attente de ce restaurant sont vides.</h2>
+                    </template>
+                    <template v-else>
+                        <div class="waiting-content">
+                            <div class="current-wait">
+                                <h2>Temps d'attente actuel {{key}} (en minutes)</h2> 
+                                <span v-if="!restaurant.open">Le restaurant n'est pas ouvert.</span>
+                                <span v-else-if="restaurant.actualWaitingTime === null || restaurant.actualWaitingTime === undefined">Les données sur l'attente actuelle n'ont pas pu être récupérés.</span>
+                                <p v-else-if = "restaurant.actualWaitingTime < 10">0{{ restaurant.actualWaitingTime }}</p>
+                                <p v-else>{{ restaurant.actualWaitingTime }}</p>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+            </template>
         </template>
-        <template v-else-if="is_waitingTime_empty">
-            <h2>Les données de la file d'attente de ce restaurant sont vides.</h2>
-        </template>
-        <template v-else-if="is_work_in_progress">
-            <h2>Nous sommes toujours en train de travailler pour vous fournir le temps d'attente de ce restaurant.</h2>
-        </template>
-        <template v-else-if="restaurant">
+        <template v-else>
             <div class="waiting-content">
-                <div class="current-wait">
-                    <h2>Temps d'attente actuel (en minutes)</h2> 
-                    <span v-if="!is_restaurant_open">Le restaurant n'est pas encore ouvert.</span>
-                    <span v-else-if="restaurant.actualWaitingTime === null || restaurant.actualWaitingTime === undefined">Les données sur l'attente actuelle n'ont pas pu être récupérés.</span>
-                    <p v-else-if = "restaurant.actualWaitingTime < 10">0{{ restaurant.actualWaitingTime }}</p>
-                    <p v-else>{{ restaurant.actualWaitingTime }}</p>
-                </div>
-                <div class="wait-prediction">
-                    <h2>Prédiction d'attente</h2>
-                    <div v-if="prediction_is_not_null" class="chart">
+                <div class="wait-prediction" v-for="(restaurant,key,index) in restaurants">
+                    <h2>Prédiction d'attente {{key}}</h2>
+                    <div v-if="!restaurant.prediction_is_null" class="chart">
                         <p>{{ restaurant.predictionDate }}</p>
-                        <canvas id="histogramCanvas"></canvas>
+                        <canvas :id="'histogramCanvas' + index"></canvas>
                     </div>
                     <p v-else>Les prédictions sur le temps d'attente n'ont pas pu être récupérés.</p>
                 </div>
-                </div>
+            </div>
         </template>
     </section>
 </main>
@@ -74,3 +79,11 @@ $bde = isset($_GET['bde']);
 <script src="<?= getRootPath() ?>wait/main.js" type="module"></script>
 </body>
 </html>
+<!-- <div class="wait-prediction">
+                    <h2>Prédiction d'attente</h2>
+                    <div v-if="prediction_is_not_null" class="chart">
+                        <p>{{ restaurant.predictionDate }}</p>
+                        <canvas id="histogramCanvas"></canvas>
+                    </div>
+                    <p v-else>Les prédictions sur le temps d'attente n'ont pas pu être récupérés.</p>
+                </div> -->
